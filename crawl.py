@@ -55,10 +55,9 @@ class letian():
         commodities = self.browser.find_element_by_id('prdList').find_elements_by_class_name('productMd')
         for commodity in commodities:
             chinese_name = commodity.find_element_by_class_name('brand').find_element_by_tag_name('strong').text
-
+            all_name = commodity.find_element_by_class_name('brand').text
             print(chinese_name)
-            print()
-            print()
+            print(self.string_minus(chinese_name, all_name))
             print(commodity.find_element_by_class_name('product').text)
             try:
                 print(commodity.find_element_by_class_name('cancel').text)
@@ -85,6 +84,19 @@ class letian():
         """
         self.connection.close()
         self.cursor.close()
+
+    def string_minus(self, s1, s2):
+        """
+        实现s2-s1
+        :param s1:
+        :param s2:
+        :return:
+        """
+        result = s2.replace(s1, '')
+        if result == '':
+            return s2
+        else:
+            return result
 
 
 if __name__ == '__main__':
