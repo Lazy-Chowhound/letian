@@ -2,6 +2,7 @@ import requests
 from lxml import etree
 from selenium import webdriver
 import pymysql
+import time
 
 
 class letian():
@@ -42,7 +43,6 @@ class letian():
                 if not url.startswith('http'):
                     url = 'http://chn.lottedfs.com' + url
                 self.urls.append(url)
-        print(self.urls)
 
     def get_stuff(self, url):
         """
@@ -51,30 +51,44 @@ class letian():
         :return:
         """
         self.browser.get(url)
-        commodities = self.browser.find_element_by_id('prdList').find_elements_by_class_name('productMd')
-        for commodity in commodities:
-            chinese_name = commodity.find_element_by_class_name('brand').find_element_by_tag_name('strong').text
-            all_name = commodity.find_element_by_class_name('brand').text
-            english_name = self.string_minus(chinese_name, all_name).strip()
-            profile = commodity.find_element_by_class_name('product').text
-            try:
-                dollars = commodity.find_element_by_class_name('cancel').text
-                discount = commodity.find_element_by_class_name('off').text
-            except Exception:
-                dollars = commodity.find_element_by_class_name('fc9').text
-                discount = ' '
-            discount_price = commodity.find_element_by_class_name('discount').find_element_by_tag_name('strong').text
-            RMB = commodity.find_element_by_class_name('discount').find_element_by_tag_name('span').text
-            try:
-                self.cursor.execute("INSERT INTO letian VALUES (%s,%s,%s,%s,%s,%s,%s)", (chinese_name, english_name,
-                                                                                         profile, dollars, discount,
-                                                                                         discount_price, RMB))
+        count = 0
+        page = 1
+        links = self.browser.find_element_by_class_name('paging').find_elements_by_tag_name('a')
+        for link in links:
+            count = count + 1
+        # 获取每一页的数据
+        while page <= count:
+            commodities = self.browser.find_element_by_id('prdList').find_elements_by_class_name('productMd')
+            for commodity in commodities:
+                chinese_name = commodity.find_element_by_class_name('brand').find_element_by_tag_name('strong').text
+                all_name = commodity.find_element_by_class_name('brand').text
+                english_name = self.string_minus(chinese_name, all_name).strip()
+                profile = commodity.find_element_by_class_name('product').text
+                try:
+                    dollars = commodity.find_element_by_class_name('cancel').text
+                    discount = commodity.find_element_by_class_name('off').text
+                except Exception:
+                    dollars = commodity.find_element_by_class_name('fc9').text
+                    discount = ' '
+                discount_price = commodity.find_element_by_class_name('discount').find_element_by_tag_name(
+                    'strong').text
+                RMB = commodity.find_element_by_class_name('discount').find_element_by_tag_name('span').text
+                try:
+                    self.cursor.execute("INSERT INTO letian VALUES (%s,%s,%s,%s,%s,%s,%s)", (chinese_name, english_name,
+                                                                                             profile, dollars, discount,
+                                                                                             discount_price, RMB))
 
-            except Exception:
-                print('插入失败')
-                self.connection.rollback()
+                except Exception:
+                    print('插入失败')
+                    self.connection.rollback()
+                else:
+                    self.connection.commit()
+            page = page + 1
+            if page > count:
+                break
             else:
-                self.connection.commit()
+                self.browser.find_element_by_link_text(str(page)).click()
+                time.sleep(2)
 
     def connect_database(self):
         """
@@ -112,6 +126,6 @@ class letian():
 if __name__ == '__main__':
     lt = letian()
     lt.connect_database()
-    lt.get_stuff(
-        'http://chn.lottedfs.com/kr/display/category/third?dispShopNo1=1200001&dispShopNo2=1200011&dispShopNo3=1200014&treDpth=3')
+    for url in lt.urls:
+        lt.get_stuff(url)
     lt.close_database()
