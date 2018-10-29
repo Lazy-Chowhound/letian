@@ -56,17 +56,18 @@ class letian():
         for commodity in commodities:
             chinese_name = commodity.find_element_by_class_name('brand').find_element_by_tag_name('strong').text
             all_name = commodity.find_element_by_class_name('brand').text
-            print(chinese_name)
-            print(self.string_minus(chinese_name, all_name))
-            print(commodity.find_element_by_class_name('product').text)
+            english_name = self.string_minus(chinese_name, all_name).strip()
+            profile = commodity.find_element_by_class_name('product').text
             try:
-                print(commodity.find_element_by_class_name('cancel').text)
-                print(commodity.find_element_by_class_name('off').text)
+                dollars = commodity.find_element_by_class_name('cancel').text
+                discount = commodity.find_element_by_class_name('off').text
             except Exception:
-                print(commodity.find_element_by_class_name('fc9').text)
-                print(' ')
-            print(commodity.find_element_by_class_name('discount').find_element_by_tag_name('strong').text)
-            print(commodity.find_element_by_class_name('discount').find_element_by_tag_name('span').text)
+                dollars = commodity.find_element_by_class_name('fc9').text
+                discount = ' '
+            discount_price = commodity.find_element_by_class_name('discount').find_element_by_tag_name('strong').text
+            RMB = commodity.find_element_by_class_name('discount').find_element_by_tag_name('span').text
+            self.cursor.execute(
+                'INSERT INTO letian VALUES(chinese_name,english_name,profile,dollars,discount,discount_price,RMB)')
         self.browser.close()
 
     def connect_database(self):
