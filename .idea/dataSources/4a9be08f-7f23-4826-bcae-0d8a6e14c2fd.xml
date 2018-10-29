@@ -955,7 +955,7 @@
     </column>
     <column id="240" parent="234" name="折扣价格">
       <Position>6</Position>
-      <DataType>varchar(10)|0s</DataType>
+      <DataType>varchar(20)|0s</DataType>
       <ColumnKind>normal</ColumnKind>
     </column>
     <column id="241" parent="234" name="人民币价格">
