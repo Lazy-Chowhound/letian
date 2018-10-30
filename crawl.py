@@ -51,6 +51,7 @@ class letian():
         :return:
         """
         self.browser.get(url)
+        time.sleep(2)
         count = 0
         page = 1
         links = self.browser.find_element_by_class_name('paging').find_elements_by_tag_name('a')
@@ -58,6 +59,7 @@ class letian():
             count = count + 1
         # 获取每一页的数据
         while page <= count:
+            print('正在爬取' + url + '第' + page + '页')
             commodities = self.browser.find_element_by_id('prdList').find_elements_by_class_name('productMd')
             for commodity in commodities:
                 chinese_name = commodity.find_element_by_class_name('brand').find_element_by_tag_name('strong').text
@@ -68,27 +70,36 @@ class letian():
                     dollars = commodity.find_element_by_class_name('cancel').text
                     discount = commodity.find_element_by_class_name('off').text
                 except Exception:
-                    dollars = commodity.find_element_by_class_name('fc9').text
-                    discount = ' '
+                    try:
+                        dollars = commodity.find_element_by_class_name('fc9').text
+                        discount = ' '
+                    except Exception:
+                        dollars = commodity.find_element_by_class_name('price').find_element_by_tag_name('span').text
+                        discount = ' '
                 discount_price = commodity.find_element_by_class_name('discount').find_element_by_tag_name(
                     'strong').text
                 RMB = commodity.find_element_by_class_name('discount').find_element_by_tag_name('span').text
-                try:
-                    self.cursor.execute("INSERT INTO letian VALUES (%s,%s,%s,%s,%s,%s,%s)", (chinese_name, english_name,
-                                                                                             profile, dollars, discount,
-                                                                                             discount_price, RMB))
+                if not chinese_name == '':
+                    try:
+                        self.cursor.execute("INSERT INTO letian VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                                            (chinese_name, english_name,
+                                             profile, dollars, discount,
+                                             discount_price, RMB))
 
-                except Exception:
-                    print('插入失败')
-                    self.connection.rollback()
-                else:
-                    self.connection.commit()
+                    except Exception:
+                        print('插入失败')
+                        self.connection.rollback()
+                    else:
+                        self.connection.commit()
+
             page = page + 1
             if page > count:
                 break
+            elif page % 10 == 1:
+                self.browser.find_element_by_link_text('Next').click()
             else:
                 self.browser.find_element_by_link_text(str(page)).click()
-                time.sleep(2)
+            time.sleep(2)
 
     def connect_database(self):
         """
@@ -126,6 +137,7 @@ class letian():
 if __name__ == '__main__':
     lt = letian()
     lt.connect_database()
+    lt.get_url()
     for url in lt.urls:
         lt.get_stuff(url)
     lt.close_database()
