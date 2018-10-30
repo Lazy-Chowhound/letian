@@ -1,11 +1,11 @@
 import requests
 from lxml import etree
 from selenium import webdriver
-import pymysql
 import time
+import Connection
 
 
-class letian():
+class LeTian():
     def __init__(self):
         self.url = 'http://chn.lottedfs.com/kr'
         self.headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:53.0) Gecko/20100101 Firefox/53.0'}
@@ -13,8 +13,7 @@ class letian():
         chrome_options = webdriver.ChromeOptions()
         chrome_options.add_argument('--headless')
         self.browser = webdriver.Chrome(chrome_options=chrome_options)
-        self.connection = None
-        self.cursor = None
+        self.database = Connection.ConnectDatabase()
 
     def get_url(self):
         """
@@ -52,16 +51,21 @@ class letian():
         """
         self.browser.get(url)
         time.sleep(2)
+        # 所有商品信息
+        info = []
+        # 总页数
         count = 0
+        # 当前页数
         page = 1
         links = self.browser.find_element_by_class_name('paging').find_elements_by_tag_name('a')
         for link in links:
             count = count + 1
         # 获取每一页的数据
         while page <= count:
-            print('正在爬取' + url + '第' + page + '页')
+            print('正在爬取 ' + url + ' 第' + str(page) + '页 ' + '共' + str(count) + '页')
             commodities = self.browser.find_element_by_id('prdList').find_elements_by_class_name('productMd')
             for commodity in commodities:
+                commodity_info = []
                 chinese_name = commodity.find_element_by_class_name('brand').find_element_by_tag_name('strong').text
                 all_name = commodity.find_element_by_class_name('brand').text
                 english_name = self.string_minus(chinese_name, all_name).strip()
@@ -80,18 +84,14 @@ class letian():
                     'strong').text
                 RMB = commodity.find_element_by_class_name('discount').find_element_by_tag_name('span').text
                 if not chinese_name == '':
-                    try:
-                        self.cursor.execute("INSERT INTO letian VALUES (%s,%s,%s,%s,%s,%s,%s)",
-                                            (chinese_name, english_name,
-                                             profile, dollars, discount,
-                                             discount_price, RMB))
-
-                    except Exception:
-                        print('插入失败')
-                        self.connection.rollback()
-                    else:
-                        self.connection.commit()
-
+                    commodity_info.append(chinese_name)
+                    commodity_info.append(english_name)
+                    commodity_info.append(profile)
+                    commodity_info.append(dollars)
+                    commodity_info.append(discount)
+                    commodity_info.append(discount_price)
+                    commodity_info.append(RMB)
+                    info.append(commodity_info)
             page = page + 1
             if page > count:
                 break
@@ -100,22 +100,21 @@ class letian():
             else:
                 self.browser.find_element_by_link_text(str(page)).click()
             time.sleep(2)
+        self.database.multi_insert(info)
 
     def connect_database(self):
         """
         连接数据库
         :return:
         """
-        self.connection = pymysql.Connect(host='localhost', user='root', password='061210', port=3306, db='letian')
-        self.cursor = self.connection.cursor()
+        self.database.open_connection()
 
     def close_database(self):
         """
         关闭数据库
         :return:
         """
-        self.connection.close()
-        self.cursor.close()
+        self.database.close_connection()
 
     def __del__(self):
         self.browser.close()
@@ -135,9 +134,11 @@ class letian():
 
 
 if __name__ == '__main__':
-    lt = letian()
+    start_time = time.time()
+    lt = LeTian()
     lt.connect_database()
-    lt.get_url()
-    for url in lt.urls:
-        lt.get_stuff(url)
+    # lt.get_url()
+    # for url in lt.urls:
+    lt.get_stuff('http://chn.lottedfs.com/kr/display/category/third?dispShopNo1=1200001&dispShopNo2=1200002&dispShopNo3=1200004&treDpth=3')
     lt.close_database()
+    print('共耗时' + str(time.time() - start_time) + 's')
